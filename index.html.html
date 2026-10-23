@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pathakvadi Rubber Dam Dashboard</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #eef3f8;
+  color: #1e293b;
+}
+
+header {
+  background: #123c63;
+  color: white;
+  padding: 22px 15px;
+  text-align: center;
+}
+
+header h1 { margin: 0 0 8px; font-size: 25px; }
+header p { margin: 0; color: #dbeafe; }
+
+main {
+  max-width: 1150px;
+  margin: auto;
+  padding: 18px;
+}
+
+#loginForm {
+  max-width: 380px;
+  margin: 55px auto;
+  padding: 25px;
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 4px 18px #0001;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+button {
+  border: 0;
+  border-radius: 8px;
+  padding: 11px 16px;
+  color: white;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+#loginBtn { width: 100%; background: #1672c4; }
+#dashboard { display: none; }
+
+.section-title {
+  margin: 25px 0 14px;
+  font-size: 21px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(225px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: white;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 3px 12px #0000000b;
+  text-align: center;
+}
+
+.card h3 { margin: 0 0 12px; }
+
+.reading {
+  font-size: 28px;
+  font-weight: bold;
+  color: #0877bc;
+  margin: 12px 0;
+}
+
+.unit { font-size: 14px; color: #64748b; }
+
+.gauge {
+  width: 145px;
+  height: 145px;
+  margin: 12px auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(
+    #159bd7 0deg,
+    #159bd7 var(--angle, 0deg),
+    #e2e8f0 var(--angle, 0deg),
+    #e2e8f0 360deg
+  );
+  position: relative;
+}
+
+.gauge::before {
+  content: "";
+  position: absolute;
+  width: 112px;
+  height: 112px;
+  background: white;
+  border-radius: 50%;
+}
+
+.gauge-inner { z-index: 1; }
+.gauge-value { font-size: 20px; font-weight: bold; }
+.gauge-unit { font-size: 12px; color: #64748b; }
+
+.water-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.tank {
+  height: 190px;
+  width: 100px;
+  border: 4px solid #456579;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.water {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 0%;
+  background: #159bd7;
+  transition: height .5s;
+}
+
+.water-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: bold;
+  z-index: 2;
+}
+
+.relay-status {
+  font-weight: bold;
+  font-size: 20px;
+  margin: 15px 0;
+}
+
+.relay-btn { width: 100%; background: #1672c4; }
+.on { color: #15803d; }
+.off { color: #64748b; }
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+
+#allOffBtn { background: #c62828; }
+#logoutBtn { background: #475569; }
+
+#connection {
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff;
+  margin: 15px 0;
+  font-size: 14px;
+}
+
+footer {
+  text-align: center;
+  padding: 25px 10px;
+  color: #64748b;
+}
+
+@media(max-width: 480px) {
+  header h1 { font-size: 21px; }
+  main { padding: 12px; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Pathakvadi Rubber Dam</h1>
+  <p>Remote Monitoring & Control Dashboard</p>
+</header>
+
+<main>
+  <form id="loginForm">
+    <h2>Operator Login</h2>
+    <input id="email" type="email"
+      placeholder="Enter Email" autocomplete="username"
+      value="Enter id" required>
+    <input id="password" type="password"
+      placeholder="Enter password"
+      autocomplete="current-password" required>
+    <button id="loginBtn" type="submit">Login</button>
+  </form>
+
+  <section id="dashboard">
+    <div id="connection">Waiting for Firebase connection...</div>
+
+    <h2 class="section-title">Pressure Monitoring</h2>
+    <div class="grid" id="pressureGrid"></div>
+
+    <h2 class="section-title">Water Level Monitoring</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Dam Water Level</h3>
+        <div class="water-box">
+          <div class="tank">
+            <div id="waterFill" class="water"></div>
+            <div id="waterPercentLabel" class="water-label">--%</div>
+          </div>
+          <div class="reading">
+            <span id="waterValue">--</span>
+            <span class="unit" id="waterUnit">m</span>
+          </div>
+          <div id="waterPercentText">Level: No data</div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-title">SPAN Control</h2>
+    <div class="grid" id="relayGrid"></div>
+
+    <div class="actions">
+      <button id="allOffBtn" type="button">All SPAN OFF</button>
+      <button id="logoutBtn" type="button">Logout</button>
+    </div>
+  </section>
+</main>
+
+<footer>Created by Tech StudyCell</footer>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCazQQZj6R3SHiGYRVLl4AXzGE81qltYBA",
+  authDomain: "pathakvadi-dam-automation.firebaseapp.com",
+  databaseURL: "https://pathakvadi-dam-automation-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "pathakvadi-dam-automation",
+  storageBucket: "pathakvadi-dam-automation.firebasestorage.app",
+  messagingSenderId: "715706309663",
+  appId: "1:715706309663:web:bdbff9eaa461d4adf9092a"
+};
+
+
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.database();
+const auth = firebase.auth();
+
+const loginForm = document.getElementById("loginForm");
+const dashboard = document.getElementById("dashboard");
+const connection = document.getElementById("connection");
+
+let listeners = [];
+let loggedOutByUser = false;
+
+// Pressure conversion: bar to mmH2O
+const BAR_TO_MMH2O = 10197.16;
+
+const pressureConfig = [
+  { id: 1, path: "pressure1", unit: "mmH₂O", max: 10 * BAR_TO_MMH2O },
+  { id: 2, path: "pressure2", unit: "mmH₂O", max: 10 * BAR_TO_MMH2O },
+  { id: 3, path: "pressure3", unit: "mmH₂O", max: 10 * BAR_TO_MMH2O },
+  { id: 4, path: "pressure4", unit: "mmH₂O", max: 10 * BAR_TO_MMH2O }
+];
+
+pressureConfig.forEach(p => {
+  document.getElementById("pressureGrid").insertAdjacentHTML(
+    "beforeend",
+    `<div class="card">
+       <h3>SPAN ${p.id}</h3>
+       <div class="gauge" id="gauge${p.id}" style="--angle:0deg">
+         <div class="gauge-inner">
+           <div class="gauge-value" id="pressure${p.id}">--</div>
+           <div class="gauge-unit">${p.unit}</div>
+         </div>
+       </div>
+       <div class="unit">Range: 0–${p.max.toFixed(0)} ${p.unit}</div>
+       <div id="pressureStatus${p.id}">Waiting for data</div>
+     </div>`
+  );
+});
+
+[1, 2, 3, 4].forEach(id => {
+  document.getElementById("relayGrid").insertAdjacentHTML(
+    "beforeend",
+    `<div class="card">
+       <h3>SPAN ${id}</h3>
+       <div class="relay-status" id="status${id}">Unknown</div>
+       <button class="relay-btn" id="btn${id}" type="button">
+         Press & Hold SPAN ${id}
+       </button>
+     </div>`
+  );
+});
+
+function listen(ref, callback) {
+  ref.on("value", callback, error => {
+    connection.textContent = "Database read error: " + error.message;
+  });
+  listeners.push({ ref, callback });
+}
+
+function stopListeners() {
+  listeners.forEach(({ ref, callback }) => ref.off("value", callback));
+  listeners = [];
+}
+
+function displayNumber(value, digits = 2) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value.toFixed(digits) : "--";
+}
+
+function startDashboard() {
+  stopListeners();
+  loginForm.style.display = "none";
+  dashboard.style.display = "block";
+  connection.textContent = "Connected: waiting for sensor data...";
+
+  // Relay monitoring and control
+  [1, 2, 3, 4].forEach(id => {
+    const ref = db.ref("relay" + id);
+
+    listen(ref, snapshot => {
+      const state = snapshot.val();
+      const status = document.getElementById("status" + id);
+      const button = document.getElementById("btn" + id);
+
+      if (state !== true && state !== false) {
+        status.textContent = "Unknown";
+        status.className = "relay-status";
+        button.disabled = true;
+        return;
+      }
+
+      status.textContent = state ? "ON" : "OFF";
+      status.className = "relay-status " + (state ? "on" : "off");
+      button.style.background = state ? "#15803d" : "#1672c4";
+      button.disabled = false;
+    });
+
+    // Momentary control: ON while the button is pressed, OFF on release.
+    const button = document.getElementById("btn" + id);
+    let buttonHeld = false;
+
+    const setMomentaryState = async (state) => {
+      try {
+        await ref.set(state);
+      } catch (error) {
+        alert("SPAN " + id + " command failed: " + error.message);
+      }
+    };
+
+    button.addEventListener("pointerdown", async (event) => {
+      if (button.disabled || buttonHeld) return;
+      event.preventDefault();
+      buttonHeld = true;
+      button.setPointerCapture?.(event.pointerId);
+      button.style.background = "#15803d";
+      await setMomentaryState(true);
+    });
+
+    const releaseButton = async () => {
+      if (!buttonHeld) return;
+      buttonHeld = false;
+      await setMomentaryState(false);
+    };
+
+    button.addEventListener("pointerup", releaseButton);
+    button.addEventListener("pointercancel", releaseButton);
+    button.addEventListener("lostpointercapture", releaseButton);
+    button.addEventListener("pointerleave", (event) => {
+      if (event.buttons === 0) releaseButton();
+    });
+    window.addEventListener("blur", releaseButton);
+  });
+
+  // Pressure readings: Firebase values are assumed to be in bar.
+  // Convert to mmH2O for display.
+  pressureConfig.forEach(p => {
+    listen(db.ref(p.path), snapshot => {
+      const value = snapshot.val();
+      const valid = typeof value === "number" &&
+                    Number.isFinite(value);
+
+      const pressureMmH2O = valid
+        ? value * BAR_TO_MMH2O
+        : null;
+
+      document.getElementById("pressure" + p.id).textContent =
+        valid ? displayNumber(pressureMmH2O, 2) : "--";
+
+      document.getElementById("pressureStatus" + p.id).textContent =
+        valid ? "Live reading" : "No valid sensor data";
+
+      const percentage = valid
+        ? Math.max(0, Math.min(100, pressureMmH2O / p.max * 100))
+        : 0;
+
+      document.getElementById("gauge" + p.id)
+        .style.setProperty("--angle", (percentage * 3.6) + "deg");
+    });
+  });
+
+  // Water level in metres and percentage
+  listen(db.ref("waterLevel"), snapshot => {
+    const value = snapshot.val();
+    const valid = typeof value === "number" &&
+                  Number.isFinite(value);
+
+    document.getElementById("waterValue").textContent =
+      valid ? displayNumber(value) : "--";
+
+    document.getElementById("waterPercentText").textContent =
+      valid ? "Measured water level" : "Level: No valid sensor data";
+
+    const maxLevel = 5;
+    const percent = valid
+      ? Math.max(0, Math.min(100, value / maxLevel * 100))
+      : 0;
+
+    document.getElementById("waterFill").style.height = percent + "%";
+    document.getElementById("waterPercentLabel").textContent =
+      valid ? percent.toFixed(1) + "%" : "--%";
+  });
+
+  // Firebase connection status
+  const connectedRef = db.ref(".info/connected");
+  listen(connectedRef, snapshot => {
+    connection.textContent = snapshot.val()
+      ? "Firebase connected"
+      : "Firebase disconnected";
+  });
+}
+
+loginForm.addEventListener("submit", async event => {
+  event.preventDefault();
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    loggedOutByUser = false;
+    startDashboard();
+  } catch (error) {
+    alert("Login failed: " + error.message);
+  }
+});
+
+document.getElementById("allOffBtn").onclick = async () => {
+  if (!confirm("Are you sure you want to command all relays OFF?")) return;
+
+  const updates = {};
+  [1, 2, 3, 4].forEach(id => updates["relay" + id] = false);
+
+  try {
+    await db.ref("/").update(updates);
+  } catch (error) {
+    alert("All OFF command failed: " + error.message);
+  }
+};
+
+document.getElementById("logoutBtn").onclick = async () => {
+  loggedOutByUser = true;
+  stopListeners();
+
+  try {
+    await auth.signOut();
+    dashboard.style.display = "none";
+    loginForm.style.display = "block";
+    loginForm.reset();
+  } catch (error) {
+    alert("Logout failed: " + error.message);
+  }
+};
+
+// Restore an existing authenticated session
+auth.onAuthStateChanged(user => {
+  if (user && !loggedOutByUser) {
+    startDashboard();
+  } else if (!user) {
+    stopListeners();
+    dashboard.style.display = "none";
+    loginForm.style.display = "block";
+  }
+});
+</script>
+
+</body>
+</html>
